@@ -1,0 +1,43 @@
+pipeline {
+    agent {
+        label 'master'
+    }
+    stages {
+        stage('creating ECR Repo') {
+            steps {
+                echo 'creating ECR Repo'
+            }
+        }
+        stage('building Docker image') {
+            steps {
+                echo 'building Docker image'
+            }
+        }
+        stage('pushing Docker image to ECR Repo') {
+            steps {
+                echo 'pushing Docker image to ECR Repo'
+            }
+        }
+        stage('creating infrastructure for the app') {
+            steps {
+                echo 'creating infrastructure for the app'
+            }
+        }
+        stage('deploying the application') {
+            steps {
+                echo 'deploying the application'
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Goodbye ALL... Please come back soon'
+        }
+        failure {
+            echo 'Sorry but you messed up...'
+        }
+        success { 
+            echo 'You are the man/woman...'
+        }
+    }
+}
