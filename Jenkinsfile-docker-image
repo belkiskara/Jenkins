@@ -1,0 +1,51 @@
+pipeline {
+	agent { label "master" }
+	environment {
+		APP_REPO_NAME = "belkiskara/phonebook"
+	}
+	stages {
+		stage('Pull the application') {
+			steps {
+				sh 'wget https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/Dockerfile'
+				sh 'wget https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/phonebook-app.py'
+				sh 'wget https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/requirements.txt'
+				sh 'wget -P templates https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/templates/delete.html'
+				sh 'wget -P templates https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/templates/add-update.html'
+				sh 'wget -P templates https://raw.githubusercontent.com/belkiskara/aws-workshop/master/devops/projects/203-docker-swarm-deployment-of-phonebook-app-on-python-flask-mysql/templates/index.html'
+			}
+		}
+		stage('Build Docker Image') {
+			steps {
+				sh 'docker build -t phonebook:latest .'
+				sh 'docker tag phonebook:latest $APP_REPO_NAME:latest'
+				sh 'docker tag phonebook:latest $APP_REPO_NAME:${BUILD_ID}'
+				sh 'docker images'
+			}
+		}
+		stage('Push Image to Docker Hub') {
+			steps {
+				withDockerRegistry([ credentialsId: "dockerhub", url: "" ]) {
+				sh 'docker push $APP_REPO_NAME:latest'
+				sh 'docker push $APP_REPO_NAME:${BUILD_ID}'
+				}
+			}
+		}
+		stage('Renew deployment') {
+			steps {
+				script {
+					sshagent(credentials : ['ssh']) {
+						sh "echo pwd"
+						sh 'ssh -t -t ubuntu@54.210.214.185 -o StrictHostKeyChecking=no "kubectl set image deployment/phonebook-deployment phonebook=belkiskara/phonebook:${BUILD_ID} --record"'
+					}
+				}
+			}
+		}
+	}
+ 	post {
+        	always {
+            		echo 'Deleting all local images'
+            	sh 'docker image prune -af'
+		sh 'rm -rf templates app.p* requirements.tx* Dockerfil*'
+        	}
+	}
+}
